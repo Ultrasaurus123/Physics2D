@@ -89,77 +89,78 @@ bool Game::Init(HWND window)
 	srand(time(nullptr));
 
 	//add default rigid bodies
+	std::shared_ptr<GameObject> rBody;
 	for (int i = 0; i < 30; i++)
 	{
-		std::shared_ptr<RigidBody> rBody = std::make_shared<RigidBody>();
 		if (rand() % 2 == 0)
 		{
-			rBody->shape = new CircleShape(rand() % 16 + 16.f);
+			rBody = std::make_shared<GameObject>(_srvCircle, 1 / (rand() % 100 + 20.f), .75f, rand() % 16 + 16.f);
 		}
 		else
 		{
-			rBody->shape = new BoxShape(Vector2(rand() % 32 + 16.f, rand() % 32 + 16.f));
+			rBody = std::make_shared<GameObject>(_srvGround, 1 / (rand() % 100 + 20.f), .75f, Vector2(rand() % 32 + 16.f, rand() % 32 + 16.f));
 		}
-		rBody->position = Vector2(rand() % 1150 + 50, 700);
-		rBody->invMass = 1 / (rand() % 100 + 20.f);
-		rBody->restitution = 1.f;
-		rBody->velocity = Vector2(rand() % 150, rand() % 100);
-		_rigidBodies.push_back(rBody);
+		rBody->GetBody().rotation = (rand() % 316) / 100.f;
+		rBody->GetBody().position = Vector2(rand() % 1150 + 50, 700);
+		rBody->GetBody().velocity = Vector2(rand() % 150, rand() % 100);
+		_gameObjects.push_back(rBody);
 	}
-	std::shared_ptr<RigidBody> rBody = std::make_shared<RigidBody>();
-	rBody->shape = new BoxShape(Vector2(640.f, 50.f));
-	rBody->position = Vector2(640.f, 50.f);
-	_rigidBodies.push_back(rBody);
 
-	rBody = std::make_shared<RigidBody>();
-	rBody->shape = new BoxShape(Vector2(640.f, 50.f));
-	rBody->position = Vector2(640.f, 1230.f);
-	_rigidBodies.push_back(rBody);
+	rBody = std::make_shared<GameObject>(_srvGround, 0.f, 0.f, Vector2(640.f, 50.f));
+	rBody->GetBody().position = Vector2(640.f, 50.f);
+	_gameObjects.push_back(rBody);
 
-	rBody = std::make_shared<RigidBody>();
-	rBody->shape = new BoxShape(Vector2(50.f, 640.f));
-	rBody->position = Vector2(-50.f, 640.f);
-	_rigidBodies.push_back(rBody);
+	rBody = std::make_shared<GameObject>(_srvGround, 0.f, 0.f, Vector2(640.f, 50.f));
+	rBody->GetBody().position = Vector2(640.f, 1230.f);
+	_gameObjects.push_back(rBody);
+	
+	rBody = std::make_shared<GameObject>(_srvGround, 0.f, 0.f, Vector2(50.f, 640.f));
+	rBody->GetBody().position = Vector2(-50.f, 640.f);
+	_gameObjects.push_back(rBody);
+	
+	rBody = std::make_shared<GameObject>(_srvGround, 0.f, 0.f, Vector2(50.f, 640.f));
+	rBody->GetBody().position = Vector2(1330.f, 640.f);
+	_gameObjects.push_back(rBody);
 
-	rBody = std::make_shared<RigidBody>();
-	rBody->shape = new BoxShape(Vector2(50.f, 640.f));
-	rBody->position = Vector2(1330.f, 640.f);
-	_rigidBodies.push_back(rBody);
+	rBody = std::make_shared<GameObject>(_srvGround, 0.f, 0.f, Vector2(200.f, 25.f));
+	rBody->GetBody().position = Vector2(500.f, 400.f);
+	rBody->GetBody().rotation = XMConvertToRadians(-30.f);
+	_gameObjects.push_back(rBody);
 
 	return true;
 }
 bool Game::Update(float dt)
 {
-	if (_rigidBodies.size() > 0)
+	if (_gameObjects.size() > 0)
 	{
-		auto &body = _rigidBodies[0];
+		auto &body = _gameObjects[0]->GetBody();
 		if (GetAsyncKeyState(VK_LEFT) & 0x8000)
 		{
-			body->velocity += Vector2(-50.f, 0);
+			body.velocity += Vector2(-50.f, 0);
 		}
 		if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
 		{
-			body->velocity += Vector2(50.f, 0);
+			body.velocity += Vector2(50.f, 0);
 		}
 		if (GetAsyncKeyState(VK_UP) & 0x8000)
 		{
-			body->velocity += Vector2(0, 50.f);
+			body.velocity += Vector2(0, 50.f);
 		}
 		if (GetAsyncKeyState(VK_DOWN) & 0x8000)
 		{
-			body->velocity += Vector2(0, -50.f);
+			body.velocity += Vector2(0, -50.f);
 		}
 	}
 
-	for (int i = 0; i < _rigidBodies.size(); i++)
+	for (int i = 0; i < _gameObjects.size(); i++)
 	{
-		std::shared_ptr<RigidBody> &body = _rigidBodies[i];
+		RigidBody &body = _gameObjects[i]->GetBody();
 
-		if (body->invMass > 0.f)
+		if (body.invMass > 0.f)
 		{
-			Vector2 totalAcc = body->acceleration + Vector2(0, -98.f);
-			body->velocity += totalAcc * dt;
-			body->position += body->velocity * dt;
+			Vector2 totalAcc = body.acceleration + Vector2(0, -98.f);
+			body.velocity += totalAcc * dt;
+			body.position += body.velocity * dt;
 		}
 	}
 
@@ -175,24 +176,9 @@ void Game::Draw()
 	_context->ClearRenderTargetView(_backBuffer.Get(), background);
 
 	_spriteBatch->Begin(DirectX::SpriteSortMode_Deferred, _blendState.Get());
-	for (int i = 0; i < _rigidBodies.size(); i++)
+	for (int i = 0; i < _gameObjects.size(); i++)
 	{
-		std::shared_ptr<RigidBody> &body = _rigidBodies[i];
-		if (body->shape->type == ShapeType::Circle)
-		{
-			Vector2 position = body->position;
-			position.y = 720 - position.y;
-			float radius = ((CircleShape*)body->shape)->radius;
-			_spriteBatch->Draw(_srvCircle.Get(), position - Vector2(radius, radius), nullptr, Colors::White, 0, Vector2::Zero, Vector2(radius/32.f, radius/32.f));
-		}
-		else if (body->shape->type == ShapeType::Box)
-		{
-			Vector2 position = body->position;
-			position.y = 720 - position.y;
-			Vector2 halfWidths = ((BoxShape*)body->shape)->halfWidths;
-			RECT destRect = { position.x - halfWidths.x, position.y - halfWidths.y, position.x + halfWidths.x, position.y + halfWidths.y };
-			_spriteBatch->Draw(_srvGround.Get(), destRect);
-		}
+		_gameObjects[i]->Draw(_spriteBatch);
 	}
 	_spriteBatch->End();
 
@@ -205,34 +191,34 @@ void Game::GetContacts()
 	Vector2 groundNormal = Vector2(0, 1.0);
 	float groundDepth = 70.f;
 
-	for (int i = 0; i < _rigidBodies.size(); i++)
+	for (int i = 0; i < _gameObjects.size(); i++)
 	{
-		std::shared_ptr<RigidBody> &body = _rigidBodies[i];
-		if (body->shape->type == ShapeType::Circle)
+		RigidBody &body = _gameObjects[i]->GetBody();
+		if (body.shape->type == ShapeType::Circle)
 		{
-			for (int j = i + 1; j < _rigidBodies.size(); j++)
+			for (int j = i + 1; j < _gameObjects.size(); j++)
 			{
-				if (_rigidBodies[j]->shape->type == ShapeType::Circle)
+				if (_gameObjects[j]->GetBody().shape->type == ShapeType::Circle)
 				{
-					CircleCircleCollision(body, _rigidBodies[j]);
+					CircleCircleCollision(body, _gameObjects[j]->GetBody());
 				}
-				else if (_rigidBodies[j]->shape->type == ShapeType::Box)
+				else if (_gameObjects[j]->GetBody().shape->type == ShapeType::Box)
 				{
-					CircleBoxCollision(body, _rigidBodies[j]);
+					CircleBoxCollision(body, _gameObjects[j]->GetBody());
 				}
 			}
 		}
-		else if (body->shape->type == ShapeType::Box)
+		else if (body.shape->type == ShapeType::Box)
 		{
-			for (int j = i + 1; j < _rigidBodies.size(); j++)
+			for (int j = i + 1; j < _gameObjects.size(); j++)
 			{
-				if (_rigidBodies[j]->shape->type == ShapeType::Circle)
+				if (_gameObjects[j]->GetBody().shape->type == ShapeType::Circle)
 				{
-					CircleBoxCollision(_rigidBodies[j], body);
+					CircleBoxCollision(_gameObjects[j]->GetBody(), body);
 				}
-				else if (_rigidBodies[j]->shape->type == ShapeType::Box)
+				else if (_gameObjects[j]->GetBody().shape->type == ShapeType::Box)
 				{
-					BoxBoxCollision(body, _rigidBodies[j]);
+					BoxBoxCollision(body, _gameObjects[j]->GetBody());
 				}
 			}
 		}
@@ -246,164 +232,169 @@ void Game::SolveContacts()
 	{
 		Contact &contact = _contacts[i];
 
-		float totalInvMass = contact.bodyB->invMass;
-		if (contact.bodyA != nullptr)
-		{
-			totalInvMass += contact.bodyA->invMass;
-		}
-
+		float totalInvMass = contact.bodyB.invMass;
+		totalInvMass += contact.bodyA.invMass;
 		if (totalInvMass < 0.0001f)
 		{
 			continue;
 		}
 
-		Vector2 relVelocity = contact.bodyB->velocity;
-		if (contact.bodyA != nullptr)
-		{
-			relVelocity -= contact.bodyA->velocity;
-		}
+		Vector2 relVelocity = contact.bodyB.velocity;
+		relVelocity -= contact.bodyA.velocity;
 		float incoming = relVelocity.Dot(contact.normal);
 		if (incoming < 0)
 		{
-			float restitution = 0.5f * contact.bodyB->restitution;
-			if (contact.bodyA != nullptr)
-			{
-				restitution += 0.5f * contact.bodyA->restitution;
-			}
+			float restitution = 0.5f * contact.bodyB.restitution;
+			restitution += 0.5f * contact.bodyA.restitution;
 			float outgoing = -incoming * restitution;
 			float newSpeed = -incoming + outgoing;
-			contact.bodyB->velocity += (contact.bodyB->invMass / totalInvMass) * contact.normal * newSpeed;
-			if (contact.bodyA != nullptr)
-			{
-				contact.bodyA->velocity += (contact.bodyA->invMass / totalInvMass) * -contact.normal * newSpeed;
-			}
+			contact.bodyB.velocity += (contact.bodyB.invMass / totalInvMass) * contact.normal * newSpeed;
+			contact.bodyA.velocity += (contact.bodyA.invMass / totalInvMass) * -contact.normal * newSpeed;
 
 		}
-		contact.bodyB->position += (contact.bodyB->invMass / totalInvMass) * contact.normal * contact.penDepth;
-		if (contact.bodyA != nullptr)
-		{
-			contact.bodyA->position += (contact.bodyA->invMass / totalInvMass) * -contact.normal * contact.penDepth;
-		}
+		contact.bodyB.position += (contact.bodyB.invMass / totalInvMass) * contact.normal * contact.penDepth;
+		contact.bodyA.position += (contact.bodyA.invMass / totalInvMass) * -contact.normal * contact.penDepth;
 	}
 
 }
 
-void Game::CirclePlaneCollision(const std::shared_ptr<RigidBody> &circle, const Vector2 &planeNormal, float planeDepth)
+void Game::CircleBoxCollision(RigidBody &circle, RigidBody &box)
 {
-	float dist = circle->position.Dot(planeNormal) - planeDepth;
-	float radius = ((CircleShape*)circle->shape)->radius;
-	if (dist <= radius)
-	{
-		Contact c = {};
-		c.normal = planeNormal;
-		c.penDepth = radius - dist;
-		c.bodyA = nullptr;
-		c.bodyB = circle;
-		_contacts.push_back(c);
-	}
-}
+	const Vector2 &halfWidths = ((BoxShape*)box.shape)->halfWidths;
+	float radius = ((CircleShape*)circle.shape)->radius;
 
-void Game::CircleBoxCollision(const std::shared_ptr<RigidBody> &circle, const std::shared_ptr<RigidBody> &box)
-{
-	const Vector2 &halfWidths = ((BoxShape*)box->shape)->halfWidths;
-	float radius = ((CircleShape*)circle->shape)->radius;
-
-	Vector2 closestPoint = Vector2::Zero;
-	if (circle->position.x <= box->position.x - halfWidths.x)
-	{ 
-		closestPoint.x = box->position.x - halfWidths.x;
-	}
-	else if (circle->position.x >= box->position.x + halfWidths.x)
+	Vector2 posDiff = circle.position - box.position;
+	Matrix rotMatrix = Matrix::CreateRotationZ(-box.rotation);
+	Vector2 up = Vector2::TransformNormal(Vector2(0, 1), rotMatrix);
+	Vector2 right = Vector2::TransformNormal(Vector2(1, 0), rotMatrix);
+	float distUp = up.Dot(posDiff);
+	float distRight = right.Dot(posDiff);
+	if (fabsf(distUp) > halfWidths.y)
 	{
-		closestPoint.x = box->position.x + halfWidths.x;
-	}
-	else
-	{
-		closestPoint.x = circle->position.x;
-	}
-	if (circle->position.y <= box->position.y - halfWidths.y)
-	{
-		closestPoint.y = box->position.y - halfWidths.y;
-	}
-	else if (circle->position.y >= box->position.y + halfWidths.y)
-	{
-		closestPoint.y = box->position.y + halfWidths.y;
-	}
-	else
-	{
-		closestPoint.y = circle->position.y;
+		distUp = std::copysignf(halfWidths.y, distUp);
 	}
 
-	Vector2 diff = circle->position - closestPoint;
+	if (fabsf(distRight) > halfWidths.x)
+	{
+		distRight = std::copysignf(halfWidths.x, distRight);
+	}
+
+	Vector2 closestPoint = box.position + up * distUp + right * distRight;
+
+	Vector2 diff = circle.position - closestPoint;
 	float dist = diff.Length();
 
 	if (dist <= radius)
 	{
-		Contact c = {};
+		Contact c(box, circle);
 		diff.Normalize(c.normal);
 		c.penDepth = radius - dist;
-		c.bodyA = box;
-		c.bodyB = circle;
 		_contacts.push_back(c);
 
 	}
 }
 
-void Game::CircleCircleCollision(const std::shared_ptr<RigidBody> &circleA, const std::shared_ptr<RigidBody> &circleB)
+void Game::CircleCircleCollision(RigidBody &circleA, RigidBody &circleB)
 {
-	Vector2 diff = circleB->position - circleA->position;
+	Vector2 diff = circleB.position - circleA.position;
 	float dist = diff.Length();
-	float totalRadius = (((CircleShape*)circleA->shape)->radius + ((CircleShape*)circleB->shape)->radius);
+	float totalRadius = (((CircleShape*)circleA.shape)->radius + ((CircleShape*)circleB.shape)->radius);
 
 	if (dist <= totalRadius)
 	{
-		Contact c = {};
+		Contact c(circleA, circleB);
 		diff.Normalize(c.normal);
 		c.penDepth = totalRadius - dist;
-		c.bodyA = circleA;
-		c.bodyB = circleB;
 		_contacts.push_back(c);
 
 	}
 }
 
-void Game::BoxBoxCollision(const std::shared_ptr<RigidBody> &boxA, const std::shared_ptr<RigidBody> &boxB)
+void Game::BoxBoxCollision(RigidBody &boxA, RigidBody &boxB)
 {
-	if (boxA->invMass + boxB->invMass < 0.00001f)
+	if (boxA.invMass + boxB.invMass < 0.00001f)
 	{
 		return;
 	}
-	const Vector2 &halfWidthsA = ((BoxShape*)boxA->shape)->halfWidths;
-	const Vector2 &halfWidthsB = ((BoxShape*)boxB->shape)->halfWidths;
-	Vector2 minNormal = Vector2(0, 1.f);
-	float minDepth = (boxA->position.y + halfWidthsA.y) - (boxB->position.y - halfWidthsB.y);
-	float penDepth = (boxA->position.x + halfWidthsA.x) - (boxB->position.x - halfWidthsB.x);
-	if (penDepth < minDepth)
+	const Vector2 &halfWidthsA = ((BoxShape*)boxA.shape)->halfWidths;
+	const Vector2 &halfWidthsB = ((BoxShape*)boxB.shape)->halfWidths;
+	Matrix rotMatrixA = Matrix::CreateRotationZ(-boxA.rotation);
+	Vector2 upA = Vector2::TransformNormal(Vector2(0, 1), rotMatrixA);
+	Vector2 rightA = Vector2::TransformNormal(Vector2(1, 0), rotMatrixA);
+	Matrix rotMatrixB = Matrix::CreateRotationZ(-boxB.rotation);
+	Vector2 upB = Vector2::TransformNormal(Vector2(0, 1), rotMatrixB);
+	Vector2 rightB = Vector2::TransformNormal(Vector2(1, 0), rotMatrixB);
+
+	Vector2 cornersA[] =
 	{
-		minDepth = penDepth;
-		minNormal = Vector2(1.f, 0);
-	}
-	penDepth = (boxB->position.y + halfWidthsB.y) - (boxA->position.y - halfWidthsA.y);
-	if (penDepth < minDepth)
+		boxA.position + halfWidthsA.x * rightA + halfWidthsA.y * upA,
+		boxA.position - halfWidthsA.x * rightA + halfWidthsA.y * upA,
+		boxA.position + halfWidthsA.x * rightA - halfWidthsA.y * upA,
+		boxA.position - halfWidthsA.x * rightA - halfWidthsA.y * upA,
+	};
+	Vector2 cornersB[] =
 	{
-		minDepth = penDepth;
-		minNormal = Vector2(0, -1.f);
-	}
-	penDepth = (boxB->position.x + halfWidthsB.x) - (boxA->position.x - halfWidthsA.x);
-	if (penDepth < minDepth)
+		boxB.position + halfWidthsB.x * rightB + halfWidthsB.y * upB,
+		boxB.position - halfWidthsB.x * rightB + halfWidthsB.y * upB,
+		boxB.position + halfWidthsB.x * rightB - halfWidthsB.y * upB,
+		boxB.position - halfWidthsB.x * rightB - halfWidthsB.y * upB,
+	};
+
+	Vector2 axes[] =
 	{
-		minDepth = penDepth;
-		minNormal = Vector2(-1.f, 0);
-	}
-	if (minDepth < 0)
+		upA, -upA, rightA, -rightA,
+		upB, -upB, rightB, -rightB
+	};
+
+	Vector2 minAxis;
+	float minDepth = FLT_MAX;
+	float minA = 0, maxA = 0;
+	float minB = 0, maxB = 0;
+
+	for (int i = 0; i < _countof(axes); i++)
 	{
-		return;
+		ProjectBoxOnAxis(cornersA, axes[i], &minA, &maxA);
+		ProjectBoxOnAxis(cornersB, axes[i], &minB, &maxB);
+		float overlap1 = maxA - minB;
+		float overlap2 = maxB - minA;
+		float penDepth = min(overlap1, overlap2);
+		if (penDepth < 0)
+		{
+			return;
+		}
+		if (penDepth < minDepth)
+		{
+			minDepth = penDepth;
+			minAxis = axes[i];
+			if (overlap2 < overlap1)
+			{
+				minAxis = -minAxis;
+			}
+		}
 	}
 
-	Contact c = {};
-	c.normal = minNormal;
+	Contact c(boxA, boxB);
+	c.normal = minAxis;
 	c.penDepth = minDepth;
-	c.bodyA = boxA;
-	c.bodyB = boxB;
 	_contacts.push_back(c);
+}
+
+void Game::ProjectBoxOnAxis(const Vector2 *corners, const Vector2 &axis, float *minVal, float *maxVal)
+{
+	float currMin = FLT_MAX;
+	float currMax = -FLT_MAX;
+	for (int i = 0; i < 4; i++)
+	{
+		float proj = corners[i].Dot(axis);
+		if (proj < currMin)
+		{
+			currMin = proj;
+		}
+		if (proj > currMax)
+		{
+			currMax = proj;
+		}
+	}
+	*minVal = currMin;
+	*maxVal = currMax;
 }

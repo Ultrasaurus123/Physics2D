@@ -1,5 +1,5 @@
 #pragma once
-#include <SimpleMath.h>;
+#include <SimpleMath.h>
 
 using namespace DirectX::SimpleMath;
 
@@ -31,22 +31,18 @@ struct BoxShape : public Shape
 
 struct RigidBody 
 {
-	RigidBody() : 
-		shape(nullptr), 
-		invMass(0.f), 
-		restitution(0.f) 
-	{
-	}
-
 	virtual ~RigidBody() 
 	{
 		delete shape;
 	}
 
-	Shape *shape;
+	Shape *shape = nullptr;
 	Vector2 position;
 	Vector2 velocity;
 	Vector2 acceleration;
-	float invMass;
-	float restitution;
+	float invMass = 0.f;
+	float restitution = 0.f;
+	float rotation = 0.f;
+	float angVelocity = 0.f;
+	float angAcceleration = 0.f;
 };

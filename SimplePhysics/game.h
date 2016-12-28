@@ -7,12 +7,14 @@
 #include <SpriteBatch.h>
 #include <SpriteFont.h>
 #include "rigidBody.h"
+#include "gameObject.h"
 
 struct Contact
 {
+	Contact(RigidBody &a, RigidBody &b) : bodyA(a), bodyB(b) {}
 	Vector2 normal;
 	float penDepth;
-	std::shared_ptr<RigidBody> bodyA, bodyB;
+	RigidBody &bodyA, &bodyB;
 };
 
 class Game
@@ -26,10 +28,10 @@ public:
 	void Draw();
 	void GetContacts();
 	void SolveContacts();
-	void CirclePlaneCollision(const std::shared_ptr<RigidBody> &circle, const Vector2 &planeNormal, float planeDepth);
-	void CircleCircleCollision(const std::shared_ptr<RigidBody> &circleA, const std::shared_ptr<RigidBody> &circleB);
-	void CircleBoxCollision(const std::shared_ptr<RigidBody> &circle, const std::shared_ptr<RigidBody> &box);
-	void BoxBoxCollision(const std::shared_ptr<RigidBody> &boxA, const std::shared_ptr<RigidBody> &boxB);
+	void CircleCircleCollision(RigidBody &circleA, RigidBody &circleB);
+	void CircleBoxCollision(RigidBody &circle, RigidBody &box);
+	void BoxBoxCollision(RigidBody &boxA, RigidBody &boxB);
+	void ProjectBoxOnAxis(const Vector2 *corners, const Vector2 &axis, float *minVal, float *maxVal);
 
 private:
 	Microsoft::WRL::ComPtr<ID3D11Device> _device;
@@ -41,6 +43,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11BlendState> _blendState;
 	std::shared_ptr<DirectX::SpriteBatch> _spriteBatch;
 
-	std::vector<std::shared_ptr<RigidBody>> _rigidBodies;
+	std::vector<std::shared_ptr<GameObject>> _gameObjects;
 	std::vector<Contact> _contacts;
 };
